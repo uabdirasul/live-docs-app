@@ -7,6 +7,7 @@ import { ClientSideSuspense, RoomProvider } from "@liveblocks/react/suspense";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import ActiveCollaborators from "./ActiveCollaborators";
+import Loader from "./Loader";
 import { Input } from "./ui/input";
 
 const CollaborativeRoom = ({
@@ -67,7 +68,7 @@ const CollaborativeRoom = ({
 
   return (
     <RoomProvider id={roomId}>
-      <ClientSideSuspense fallback={<div>Loading…</div>}>
+      <ClientSideSuspense fallback={<Loader />}>
         <div className="collaborative-room">
           <Header>
             <div
