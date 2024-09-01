@@ -3,7 +3,7 @@
 import { nanoid } from "nanoid";
 import { revalidatePath } from "next/cache";
 import { liveblocks } from "../liveblocks";
-import { parseStringify } from "../utils";
+import { getAccessType, parseStringify } from "../utils";
 
 export const createDocument = async ({
   userId,
@@ -25,7 +25,7 @@ export const createDocument = async ({
     const room = await liveblocks.createRoom(roomId, {
       metadata,
       usersAccesses,
-      defaultAccesses: ["room:write"]
+      defaultAccesses: []
     });
 
     revalidatePath("/");
@@ -45,12 +45,11 @@ export const getDocument = async ({
 }) => {
   try {
     const room = await liveblocks.getRoom(roomId);
-    // todo: do this again
-    // const hasAccess = Object.keys(room.usersAccesses).includes(userId);
+    const hasAccess = Object.keys(room.usersAccesses).includes(userId);
 
-    // if (!hasAccess) {
-    //   throw new Error("You do not have access to this document");
-    // }
+    if (!hasAccess) {
+      throw new Error("You do not have access to this document");
+    }
 
     return parseStringify(room);
   } catch (error) {
@@ -77,6 +76,58 @@ export const getDocuments = async (email: string) => {
   try {
     const rooms = await liveblocks.getRooms({ userId: email });
     return parseStringify(rooms);
+  } catch (error) {
+    console.log(`Error occured`, error);
+  }
+};
+
+export const updateDocumentAccess = async ({
+  roomId,
+  email,
+  userType,
+  updatedBy
+}: ShareDocumentParams) => {
+  try {
+    const usersAccesses: RoomAccesses = {
+      [email]: getAccessType(userType) as AccessType
+    };
+
+    const room = await liveblocks.updateRoom(roomId, { usersAccesses });
+
+    if (room) {
+      //send a notification to the user that they have been added to the room
+    }
+
+    revalidatePath(`/documents/${roomId}`);
+
+    return parseStringify(room);
+  } catch (error) {
+    console.log(`Error occured`, error);
+  }
+};
+
+export const removeCollaborator = async ({
+  roomId,
+  email
+}: {
+  roomId: string;
+  email: string;
+}) => {
+  try {
+    const room = await liveblocks.getRoom(roomId);
+
+    if (room.metadata.email === email) {
+      throw new Error("You cannot remove yourself");
+    }
+
+    const updatedRoom = await liveblocks.updateRoom(roomId, {
+      usersAccesses: {
+        [email]: null
+      }
+    });
+
+    revalidatePath(`/documents/${roomId}`);
+    return parseStringify(updatedRoom);
   } catch (error) {
     console.log(`Error occured`, error);
   }
