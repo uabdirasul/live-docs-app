@@ -2,9 +2,9 @@
 
 import { nanoid } from "nanoid";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { liveblocks } from "../liveblocks";
 import { getAccessType, parseStringify } from "../utils";
-import { redirect } from "next/navigation";
 
 export const createDocument = async ({
   userId,
@@ -96,7 +96,21 @@ export const updateDocumentAccess = async ({
     const room = await liveblocks.updateRoom(roomId, { usersAccesses });
 
     if (room) {
-      //send a notification to the user that they have been added to the room
+      const notificationId = nanoid();
+
+      await liveblocks.triggerInboxNotification({
+        userId: email,
+        kind: "$documentAccess",
+        subjectId: notificationId,
+        activityData: {
+          userType,
+          title: `You have been granted ${userType} access to this document by ${updatedBy.name}`,
+          updatedBy: updatedBy.name,
+          avatar: updatedBy.avatar,
+          email: updatedBy.email
+        },
+        roomId
+      });
     }
 
     revalidatePath(`/documents/${roomId}`);
